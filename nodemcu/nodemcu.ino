@@ -1,16 +1,14 @@
 //NodeMCU script
+#include<SoftwareSerial.h>
+//
+//SoftwareSerial s(3,1);
 void setup() {
   Serial.begin(115200);
-  while(!Serial)
-  {
-    ;
-  }
+  Serial1.begin(115200);
+  delay(2000);
 }
 
 void loop() {
-  if(Serial.available())
-  {
-    //Serial.print("sup");
-    Serial.write(Serial.read());
-  }
+  Serial1.println("H: ");
+  delay(1000);
 }
