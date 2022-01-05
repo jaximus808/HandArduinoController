@@ -1,16 +1,21 @@
 //NodeMCU script
 #include<SoftwareSerial.h>
 #include<ESP8266WiFi.h>
-//#include<WiFiClient.h>
+#include<WiFiClient.h>
+#include<ESP8266HTTPClient.h>
 #include<WiFiUdp.h>
 #include<vector>
 #include<string.h>
+#include<ArduinoJson.h>
+
+//test id
+int id = 32142102;
 
 const char* ssid = "NETGEAR78";
 const char* password = "coolmoon622";
-
+//api/arm/register
 //http server
-String server = "http://192.168.1.4:3000/";
+String server = "http://192.168.1.4:3000/api/arm/register";
 
 
 //udp server
@@ -31,14 +36,17 @@ class Packet
     }
 };
 
+String nodePass = "Nwifugu31393g2HSDUg18173d_fb3yja";
+
 char incomingPacket[255];
 
 unsigned int localport = 4000;
-const int targetPort = 8000; 
+int targetPort; 
 
-const char* serverIp = "192.168.1.5";
+String serverIp; 
 
 char reply[] = "sup";
+ 
 
 void setup() {
   Serial.begin(115200);
@@ -55,13 +63,62 @@ void setup() {
   Serial.println("");
   Serial.print("Connected to WiFi network with IP Address: ");
   Serial.println(WiFi.localIP());
-  int i = Udp.begin(targetPort);
+  int i = Udp.begin(localport);
   Serial.println(i);
   delay(2000);
+  while(true)
+  {
+    
+    WiFiClient client; 
+    HTTPClient http;
+    http.begin(client, server.c_str()); 
+
+    http.addHeader("Content-Type", "application/json");
+    DynamicJsonDocument doc(1024);
+
+  // You can use a String as your JSON input.
+  // WARNING: the string in the input  will be duplicated in the JsonDocument.
+    String input =
+        "{}";
+    deserializeJson(doc, input);
+    JsonObject obj = doc.as<JsonObject>();
+    obj[String("pass")] = nodePass;
+    obj[String("id")] = id; 
+    obj[String("port")] = localport; 
+    obj[String("ip")] = WiFi.localIP();
+    
+    String output;
+    
+    Serial.println("sending packet");
+    //output 
+    serializeJson(doc, output) ; 
+    Serial.println(output);
+    int httpResponseCode = http.POST(output);
+    String payload = http.getString();
+    Serial.println(payload);
+    Serial.println(httpResponseCode);
+    deserializeJson(doc,payload);
+    obj = doc.as<JsonObject>();
+    if((!obj["error"] || obj["existing"]) && httpResponseCode > -1)
+    {
+      serverIp = obj["message"].as<String>();
+      targetPort = obj["port"];
+      Serial.println("Connecting to udp");
+      
+      Serial.println(payload);
+      Serial.println(serverIp);
+      Serial.println(targetPort);
+      break; 
+    }
+    
+    delay(5000);
+  }
+  Serial.println("starting udp process");
+  delay(1000);
 }
 
 void loop() {
-  int socketSuccess = Udp.beginPacket(serverIp, targetPort);
+  int socketSuccess = Udp.beginPacket(serverIp.c_str(), targetPort);
   Udp.write("hello");
   int sendSuccess = Udp.endPacket();
   Serial.print("connect Success: ");
@@ -69,6 +126,9 @@ void loop() {
   Serial.print("Send sucess: ");
   Serial.println(socketSuccess);
   delay(5000);
+
+
+  //Serial1.println()
 }
 //bool udpSendMessage(IPAddress ipAddr, String udpMsg, int udpPort) {
 //  /** WiFiUDP class for creating UDP communication */
