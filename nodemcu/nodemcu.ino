@@ -17,6 +17,7 @@ const char* password = "coolmoon622";
 //http server
 String server = "http://192.168.1.4:3000/api/arm/register";
 
+String armPassword = "Hwuqi1o331agywua";
 
 //udp server
 WiFiUDP Udp;
@@ -36,6 +37,26 @@ class Packet
     }
 };
 
+
+void PacketWrite(String s)
+{
+      
+  PacketWrite(s.length());
+  Udp.write(s.c_str());
+}
+
+void PacketWrite(int n)
+{
+      
+  char bytes[sizeof n];
+  std::copy(static_cast<const char*>(static_cast<const void*>(&n)),
+          static_cast<const char*>(static_cast<const void*>(&n)) + sizeof n,
+          bytes);
+  Udp.write(bytes[0]); //255
+  Udp.write(bytes[1]); //255
+  Udp.write(bytes[2]); //255
+  Udp.write(bytes[3]);
+}
 String nodePass = "Nwifugu31393g2HSDUg18173d_fb3yja";
 
 char incomingPacket[255];
@@ -46,7 +67,8 @@ int targetPort;
 String serverIp; 
 
 char reply[] = "sup";
- 
+
+bool registeredToFleet = false; 
 
 void setup() {
   Serial.begin(115200);
@@ -86,6 +108,7 @@ void setup() {
     obj[String("id")] = id; 
     obj[String("port")] = localport; 
     obj[String("ip")] = WiFi.localIP();
+    obj[String("armPass")] = armPassword;
     
     String output;
     
@@ -119,52 +142,44 @@ void setup() {
 
 void loop() {
   int socketSuccess = Udp.beginPacket(serverIp.c_str(), targetPort);
-  Udp.write("hello");
+  PacketWrite(-1);
+  PacketWrite(nodePass); 
+  if(registeredToFleet)
+  {
+    PacketWrite(1);
+    PacketWrite(id);
+    PacketWrite("test");
+  }
+  else
+  {
+    PacketWrite(0);
+    PacketWrite(id);
+    PacketWrite(armPassword);
+  }
+//  Udp.write(-1); // meaning arm 
+//  Udp.write(nodePass.c_str()); //verify arm pass
+//  if(registeredToFleet)
+//  {
+//    //just send some info like quality or smth idk, for now will just be test data
+//    Udp.write(1); //test packet 
+//    Udp.write(id); // the arm in question
+//    Udp.write("test"); //test data
+//  }
+//  else
+//  {
+//    Udp.write(0); //registering packet
+//    Udp.write(id);
+//  }
   int sendSuccess = Udp.endPacket();
+
+  //listen for a response or smth lol 
   Serial.print("connect Success: ");
   Serial.println(socketSuccess);
   Serial.print("Send sucess: ");
   Serial.println(socketSuccess);
   delay(5000);
-
-
   //Serial1.println()
 }
-//bool udpSendMessage(IPAddress ipAddr, String udpMsg, int udpPort) {
-//  /** WiFiUDP class for creating UDP communication */
-//  
-//  WiFiUDP udpClientServer;
-//
-//  // Start UDP client for sending packets
-//  int connOK = udpClientServer.begin(udpPort);
-//  
-//  if (connOK == 0) {
-//    Serial.println("UDP could not get socket");
-//    return false;
-//  }
-//  int beginOK = udpClientServer.beginPacket(ipAddr, udpPort);
-//
-//  if (beginOK == 0) { // Problem occured!
-//    udpClientServer.stop();
-//    Serial.println("UDP connection failed");
-//    return false;
-//  }
-//  int bytesSent = udpClientServer.print(udpMsg);
-//  if (bytesSent == udpMsg.length()) {
-//    Serial.println("Sent " + String(bytesSent) + " bytes from " + udpMsg + " which had a length of " + String(udpMsg.length()) + " bytes");
-//    udpClientServer.endPacket();
-//    udpClientServer.stop();
-//    return true;
-//  } else {
-//    
-//    Serial.println("Failed to send " + udpMsg + ", sent " + String(bytesSent) + " of " + String(udpMsg.length()) + " bytes");
-//    udpClientServer.endPacket();
-//    udpClientServer.stop();
-//    return false;
-//  }
-//}
-
-
 //  int packetSize = Udp.parsePacket();
 //  if(packetSize)
 //  {
