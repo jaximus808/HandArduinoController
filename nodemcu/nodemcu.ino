@@ -19,25 +19,60 @@ String server = "http://192.168.1.4:3000/api/arm/register";
 
 String armPassword = "Hwuqi1o331agywua";
 
+int intervalUdpSend =  5000; 
+unsigned long previousMillis = 0; 
+
 //udp server
 WiFiUDP Udp;
 
+
 class Packet
 {
-  public:
-    std::vector<char> writeableBuffer; 
+  public: 
     char* bufferChar;
     int readPos = 0; 
     Packet(char* _packet)
     {
       bufferChar = _packet;
-      std::vector<char> data(_packet,_packet + (unsigned)strlen(_packet));
-      writeableBuffer.insert(writeableBuffer.end(), data.begin(), data.end());
-      
+    }
+
+    Packet()
+    {
+       
+    }
+
+    void SetBuffer(char* _packet, bool resetPos = true)
+    {
+      bufferChar = _packet;  
+      if(resetPos)
+      {
+        readPos = 0; 
+      }
+      Serial.println("packetSet"); 
+    }
+
+    int ReadInt()
+    {
+      int i = (bufferChar[readPos+3] << 24) | (bufferChar[readPos+2] << 16) | (bufferChar[readPos+1] << 8) | (bufferChar[readPos]);
+      readPos += 4; 
+      return i;  
+    }
+
+    float ReadFloat() 
+    {
+      long x = (long)bufferChar[readPos+3]<<24|(long)bufferChar[readPos+2]<<16|bufferChar[readPos+1]<<8|bufferChar[readPos];
+      readPos += 4; 
+      union
+      {
+        long y;
+        float z;
+      }data; 
+      data.y = x; 
+      return data.z; 
     }
 };
 
-
+Packet PacketReader;
 void PacketWrite(String s)
 {
       
@@ -141,6 +176,37 @@ void setup() {
 }
 
 void loop() {
+  
+  
+  int packetSize = Udp.parsePacket(); 
+  if(packetSize)
+  {
+    char bufferPacket[255]; 
+    int len = Udp.read(bufferPacket, 255);
+    
+    PacketReader.SetBuffer(bufferPacket); 
+    int testInt = PacketReader.ReadInt(); 
+    
+    float testFloat = PacketReader.ReadFloat(); 
+    Serial.println("Recieved Test Int:");
+    Serial.println(testInt);  
+    Serial.println("Recieved Test Float:");
+    Serial.println(testFloat);  
+    
+  }
+  unsigned long currentMillis = millis(); 
+  if((unsigned long)(currentMillis - previousMillis) >= intervalUdpSend)
+  {
+    
+    PacketSend();
+    previousMillis = currentMillis;
+  } 
+  
+}
+
+void PacketSend()
+{
+  
   int socketSuccess = Udp.beginPacket(serverIp.c_str(), targetPort);
   PacketWrite(-1);
   PacketWrite(nodePass); 
@@ -156,20 +222,6 @@ void loop() {
     PacketWrite(id);
     PacketWrite(armPassword);
   }
-//  Udp.write(-1); // meaning arm 
-//  Udp.write(nodePass.c_str()); //verify arm pass
-//  if(registeredToFleet)
-//  {
-//    //just send some info like quality or smth idk, for now will just be test data
-//    Udp.write(1); //test packet 
-//    Udp.write(id); // the arm in question
-//    Udp.write("test"); //test data
-//  }
-//  else
-//  {
-//    Udp.write(0); //registering packet
-//    Udp.write(id);
-//  }
   int sendSuccess = Udp.endPacket();
 
   //listen for a response or smth lol 
@@ -177,8 +229,7 @@ void loop() {
   Serial.println(socketSuccess);
   Serial.print("Send sucess: ");
   Serial.println(socketSuccess);
-  delay(5000);
-  //Serial1.println()
+  
 }
 //  int packetSize = Udp.parsePacket();
 //  if(packetSize)
