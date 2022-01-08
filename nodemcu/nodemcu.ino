@@ -185,17 +185,26 @@ void loop() {
     int len = Udp.read(bufferPacket, 255);
     
     PacketReader.SetBuffer(bufferPacket); 
-    int testInt = PacketReader.ReadInt(); 
-    
-    float testFloat = PacketReader.ReadFloat(); 
-    Serial.println("Recieved Test Int:");
-    Serial.println(testInt);  
-    Serial.println("Recieved Test Float:");
-    Serial.println(testFloat);  
+    int packetId = PacketReader.ReadInt(); 
+
+    if(packetId == 0 )
+    {
+      int statusReturn = PacketReader.ReadInt();
+      if(statusReturn)
+      {
+        Serial.println("Fleet Server saved connected");
+        registeredToFleet = true;   
+      }
+    }
+    if(packetId == 1)
+    {
+      Serial.println("pingingBack");
+      PingPacket();
+    }
     
   }
   unsigned long currentMillis = millis(); 
-  if((unsigned long)(currentMillis - previousMillis) >= intervalUdpSend)
+  if((unsigned long)(currentMillis - previousMillis) >= intervalUdpSend && !registeredToFleet)
   {
     
     PacketSend();
@@ -204,23 +213,30 @@ void loop() {
   
 }
 
+void PingPacket()
+{
+  int socketSuccess = Udp.beginPacket(serverIp.c_str(), targetPort);
+  PacketWrite(-1);
+  PacketWrite(nodePass); 
+  PacketWrite(1); 
+  PacketWrite(id);
+  
+  int sendSuccess = Udp.endPacket();
+}
+
 void PacketSend()
 {
   
   int socketSuccess = Udp.beginPacket(serverIp.c_str(), targetPort);
   PacketWrite(-1);
   PacketWrite(nodePass); 
-  if(registeredToFleet)
-  {
-    PacketWrite(1);
-    PacketWrite(id);
-    PacketWrite("test");
-  }
-  else
+  if(!registeredToFleet)
   {
     PacketWrite(0);
     PacketWrite(id);
     PacketWrite(armPassword);
+    PacketWrite(nodePass);
+  
   }
   int sendSuccess = Udp.endPacket();
 
