@@ -7,7 +7,7 @@
 #include<vector>
 #include<string.h>
 #include<ArduinoJson.h>
-
+#include<string>
 //test id
 int id = 32142102;
 
@@ -92,6 +92,16 @@ void PacketWrite(int n)
   Udp.write(bytes[2]); //255
   Udp.write(bytes[3]);
 }
+
+char* IntToBytes(int n)
+{
+  char bytes[sizeof n];
+  std::copy(static_cast<const char*>(static_cast<const void*>(&n)),
+          static_cast<const char*>(static_cast<const void*>(&n)) + sizeof n,
+          bytes);
+  return bytes; 
+}
+
 String nodePass = "Nwifugu31393g2HSDUg18173d_fb3yja";
 
 char incomingPacket[255];
@@ -177,7 +187,6 @@ void setup() {
 
 void loop() {
   
-  
   int packetSize = Udp.parsePacket(); 
   if(packetSize)
   {
@@ -198,8 +207,28 @@ void loop() {
     }
     if(packetId == 1)
     {
-      Serial.println("pingingBack");
+      Serial.println("Pinged");
       PingPacket();
+    }
+    if(packetId == 2)
+    {
+      int joint1 = PacketReader.ReadInt(); 
+      int joint2 = PacketReader.ReadInt(); 
+      int joint3 = PacketReader.ReadInt(); 
+      
+      Serial1.print("<");
+      Serial1.print(String(joint1));
+      Serial1.print(",");
+      Serial1.print(String(joint2));
+      Serial1.print(",");
+      Serial1.print(String(joint3));
+      Serial1.print(",");
+      Serial1.println(">");
+      
+    }
+    if(packetId == 10)
+    {
+      Serial.println("Master Server Closed, disconnected");
     }
     
   }
@@ -210,6 +239,7 @@ void loop() {
     PacketSend();
     previousMillis = currentMillis;
   } 
+  
   
 }
 
@@ -247,50 +277,3 @@ void PacketSend()
   Serial.println(socketSuccess);
   
 }
-//  int packetSize = Udp.parsePacket();
-//  if(packetSize)
-//  {
-//    Serial.print("Received packet of size ");
-//    Serial.println(packetSize);
-//    Serial.print("From IP : ");
-//
-//    IPAddress remote = Udp.remoteIP();
-//    //print out the remote connection's IP address
-//    Serial.print(remote);
-//
-//    Serial.print(" on port : ");
-//    //print out the remote connection's port
-//    Serial.println(Udp.remotePort());
-//  }
-
-//HTTP talking
-
-//  if(WiFi.status() == WL_CONNECTED)
-//  {
-//    WiFiClient client;
-//    HTTPClient http;
-//
-//     http.begin(client, server.c_str());
-//     int httpResponseCode = http.GET();
-//     if(httpResponseCode > 0)
-//     {
-//      Serial.print("HTTP Reponse code: " );
-//      Serial.println(httpResponseCode);
-//      String payload = http.getString();
-//      Serial.println(payload);
-//     }
-//     else
-//     {
-//      Serial.print("Error code: ");
-//      Serial.print(httpResponseCode);
-//
-//     }
-//     http.end();
-//    }
-//    else
-//    {
-//      Serial.println("no wifi");
-//    }
-//
-//
-//  delay(10000);
