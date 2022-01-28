@@ -14,11 +14,17 @@ int pos = 0;
 
 int motorPos = 0; 
 
-Servo servos[3]; 
+Servo pointer; 
+Servo middle; 
+Servo ring;
 
 
 void setup() {
   Serial.begin(115200);
+  pointer.attach(10);
+  middle.attach(9);
+  ring.attach(11);
+  
   while(!Serial)
   {
     ;
@@ -34,6 +40,7 @@ void setup() {
 void loop() {
   while(Serial.available())
   {
+    
     char c = Serial.read();
     Serial.println(c);
     if(c == '<')
@@ -42,6 +49,8 @@ void loop() {
     }
     else if(c=='>' && reading)
     {
+      int index = 0; 
+      int rotBuffer[3]; 
       reading = false; 
       String stringInt = "";
       for(int i = 0; i < pos; i++)
@@ -49,19 +58,21 @@ void loop() {
         //Serial.write(receivedChars[i]);
         if(receivedChars[i] == ',')
         {
-          int rotation = stringInt.toInt(); 
+          int rotation = stringInt.toInt();
+          
           if(rotation < 0) rotation = 0; 
+          if(rotation > 360) rotation = 360; 
+
+          rotBuffer[index] = rotation/2;
+          index++; 
           Serial.println(rotation);
           stringInt = "";
-          //servos[motorPos].write(rotation);
-          motorPos++; 
+          //serv
         }
-        else
-        {
-          stringInt += receivedChars[i];
-        }
+        else stringInt += receivedChars[i];
         
       }
+      ServoHandler(rotBuffer);
       pos = 0; 
       motorPos = 0; 
       Serial.println();
@@ -76,4 +87,22 @@ void loop() {
       }
     }
   }
+}
+
+void ServoHandler(int* rots)
+{
+  Serial.println("writing to pointer");
+  Serial.println(rots[0]);
+  
+  pointer.write(180 - rots[0]);
+  
+  Serial.println("writing to middle");
+  Serial.println(rots[1]);
+  
+  middle.write(180 - rots[1]);
+  
+  Serial.println("writing to ring");
+  Serial.println(rots[2]);
+  
+  ring.write(rots[2]);
 }
